@@ -3,6 +3,7 @@ package com.obvio.assignment.services;
 import com.obvio.assignment.AssignmentApplication;
 import com.obvio.assignment.Repositories.FileDictionaryRepository;
 import com.obvio.assignment.models.FileDictionary;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,9 +26,16 @@ public class IngestionService {
     private final Logger logger = Logger.getLogger(AssignmentApplication.class.getName());
     private final FileDictionaryRepository fileDictionaryRepository;
 
+    @Transactional
     public void ParseInputFile(MultipartFile[] files) {
         for (MultipartFile file : files) {
             String fileName = file.getOriginalFilename();
+
+            if(fileDictionaryRepository.findFirstByFileName(fileName).isPresent()) {
+                logger.log(Level.WARNING, "File already exists: " + fileName);
+                throw new IllegalArgumentException("File already exists: " + fileName);
+            }
+
             logger.info("Processing file: " + fileName + ", size: " + file.getSize() + " bytes");
             HashMap<String, Integer> map = new HashMap<>();
             try {
@@ -38,6 +46,7 @@ public class IngestionService {
                 saveDocumentMap(map, fileName);
             } catch (IOException e) {
                 logger.log(Level.WARNING, "Error reading file: " + fileName, e);
+                throw new IllegalArgumentException("Error reading file: " + fileName);
             }
         }
     }

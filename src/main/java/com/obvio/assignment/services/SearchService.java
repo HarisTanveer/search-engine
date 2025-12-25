@@ -24,11 +24,10 @@ public class SearchService {
             results.add(new SearchResponse(fileDictionary.getFileName(), calculateRanking(fileDictionary, overallTotalDocuments, totalDocumentsContainingWord)));
         }
 
-        results.sort(Comparator.comparing(SearchResponse::getRanking));
+        results.sort(Comparator.comparing(SearchResponse::getRanking).thenComparing(SearchResponse::getDocumentName));
         if(results.size() >= 3){
-            return results.subList(0, 2);
+            return results.subList(0, 3);
         }
-        results.sort(Comparator.comparing(SearchResponse::getDocumentName));
         return results;
     }
 
