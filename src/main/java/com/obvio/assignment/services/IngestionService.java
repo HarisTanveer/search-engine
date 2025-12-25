@@ -34,9 +34,7 @@ public class IngestionService {
                 InputStream inputStream = file.getInputStream();
                 new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
                         .lines()
-                        .forEach(line -> {
-                            addToDocumentMap(fileName, line, map);
-                        });
+                        .forEach(line -> addToDocumentMap(fileName, line, map));
                 saveDocumentMap(map, fileName);
             } catch (IOException e) {
                 logger.log(Level.WARNING, "Error reading file: " + fileName, e);
@@ -59,7 +57,8 @@ public class IngestionService {
 
     private void addToDocumentMap(String fileName, String lineContent, HashMap<String, Integer> map) {
         logger.info(fileName + ": " + lineContent);
-        String[] words = lineContent.split("[\\\\p{Punct}\\\\s]+");
+        lineContent = lineContent.replaceAll("\\p{Punct}+", "").toLowerCase();
+        String[] words = lineContent.split(" ");
         for (String word : words) {
             if(!map.containsKey(word)) {
                 map.put(word, 1);
