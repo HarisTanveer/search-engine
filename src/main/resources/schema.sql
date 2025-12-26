@@ -1,6 +1,12 @@
 CREATE TABLE IF NOT EXISTS PUBLIC.file_dictionary (
     id INT PRIMARY KEY AUTO_INCREMENT,
     fileName VARCHAR(255),
-    word varchar(255),
-    count integer
-    );
+    word VARCHAR(255),
+    count INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS PUBLIC.word_stats (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    word VARCHAR(255) UNIQUE,
+    document_frequency INTEGER
+);
