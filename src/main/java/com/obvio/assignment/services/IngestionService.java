@@ -1,8 +1,10 @@
 package com.obvio.assignment.services;
 
-import com.obvio.assignment.AssignmentApplication;
+import lombok.extern.slf4j.Slf4j;
 import com.obvio.assignment.Repositories.FileDictionaryRepository;
+import com.obvio.assignment.Repositories.WordStatsRepository;
 import com.obvio.assignment.models.FileDictionary;
+import com.obvio.assignment.models.WordStats;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,16 +17,18 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class IngestionService {
-    private final Logger logger = Logger.getLogger(AssignmentApplication.class.getName());
     private final FileDictionaryRepository fileDictionaryRepository;
+    private final WordStatsRepository wordStatsRepository;
 
     @Transactional
     public void ParseInputFile(MultipartFile[] files) {
@@ -32,20 +36,31 @@ public class IngestionService {
             String fileName = file.getOriginalFilename();
 
             if(fileDictionaryRepository.findFirstByFileName(fileName).isPresent()) {
-                logger.log(Level.WARNING, "File already exists: " + fileName);
+                log.warn("File already exists: {}", fileName);
                 throw new IllegalArgumentException("File already exists: " + fileName);
             }
 
-            logger.info("Processing file: " + fileName + ", size: " + file.getSize() + " bytes");
-            HashMap<String, Integer> map = new HashMap<>();
+            log.info("Processing file: {}, size: {} bytes", fileName, file.getSize());
+            HashMap<String, Integer> wordCountsInFile = new HashMap<>();
+            Set<String> uniqueWordsInFile = new HashSet<>();
             try {
                 InputStream inputStream = file.getInputStream();
                 new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
                         .lines()
-                        .forEach(line -> addToDocumentMap(fileName, line, map));
-                saveDocumentMap(map, fileName);
+                        .forEach(line -> {
+                            line = line.replaceAll("\\p{Punct}+", "").toLowerCase();
+                            String[] words = line.split(" ");
+                            for (String word : words) {
+                                if (!word.isEmpty()) {
+                                    wordCountsInFile.put(word, wordCountsInFile.getOrDefault(word, 0) + 1);
+                                    uniqueWordsInFile.add(word);
+                                }
+                            }
+                        });
+                saveDocumentMap(wordCountsInFile, fileName);
+                updateWordStats(uniqueWordsInFile);
             } catch (IOException e) {
-                logger.log(Level.WARNING, "Error reading file: " + fileName, e);
+                log.error("Error reading file: {}", fileName, e);
                 throw new IllegalArgumentException("Error reading file: " + fileName);
             }
         }
@@ -64,15 +79,19 @@ public class IngestionService {
         fileDictionaryRepository.saveAll(fileDictionaryList);
     }
 
-    private void addToDocumentMap(String fileName, String lineContent, HashMap<String, Integer> map) {
-        logger.info(fileName + ": " + lineContent);
-        lineContent = lineContent.replaceAll("\\p{Punct}+", "").toLowerCase();
-        String[] words = lineContent.split(" ");
-        for (String word : words) {
-            if(!map.containsKey(word)) {
-                map.put(word, 1);
+    private void updateWordStats(Set<String> uniqueWordsInFile) {
+        for (String word : uniqueWordsInFile) {
+            Optional<WordStats> existingWordStats = wordStatsRepository.findByWord(word);
+            if (existingWordStats.isPresent()) {
+                WordStats wordStats = existingWordStats.get();
+                wordStats.setDocumentFrequency(wordStats.getDocumentFrequency() + 1);
+                wordStatsRepository.save(wordStats);
             } else {
-                map.put(word, map.get(word) + 1);
+                WordStats newWordStats = WordStats.builder()
+                        .word(word)
+                        .documentFrequency(1)
+                        .build();
+                wordStatsRepository.save(newWordStats);
             }
         }
     }
