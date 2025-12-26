@@ -20,7 +20,7 @@ public class IngestionController{
         }
 
         try {
-            ingestionService.ParseInputFile(files);
+            ingestionService.parseInputFile(files);
             return new ResponseEntity<>("Successfully uploaded " + files.length + " files", HttpStatus.OK);
 
         } catch (Exception e) {

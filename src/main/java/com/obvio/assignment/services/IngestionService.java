@@ -31,7 +31,7 @@ public class IngestionService {
     private final WordStatsRepository wordStatsRepository;
 
     @Transactional
-    public void ParseInputFile(MultipartFile[] files) {
+    public void parseInputFile(MultipartFile[] files) {
         for (MultipartFile file : files) {
             String fileName = file.getOriginalFilename();
 
