@@ -15,7 +15,7 @@ public class SearchController {
     private final SearchService searchService;
 
     @GetMapping("")
-    public ResponseEntity<List<SearchResponse>> ingest(@RequestParam String query) {
+    public ResponseEntity<List<SearchResponse>> search(@RequestParam String query) {
         List<SearchResponse> list = searchService.searchWord(query.toLowerCase());
         return ResponseEntity.ok(list);
     }
